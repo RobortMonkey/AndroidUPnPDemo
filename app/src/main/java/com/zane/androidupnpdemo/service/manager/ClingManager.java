@@ -2,22 +2,29 @@ package com.zane.androidupnpdemo.service.manager;
 
 import android.content.Context;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
+import com.zane.androidupnpdemo.Config;
 import com.zane.androidupnpdemo.entity.ClingControlPoint;
 import com.zane.androidupnpdemo.entity.ClingDevice;
 import com.zane.androidupnpdemo.entity.IControlPoint;
 import com.zane.androidupnpdemo.entity.IDevice;
 import com.zane.androidupnpdemo.service.ClingUpnpService;
+import com.zane.androidupnpdemo.service.DeviceInfo;
+import com.zane.androidupnpdemo.service.localserver.ClingMediaServer;
+import com.zane.androidupnpdemo.service.localserver.HttpServer;
 import com.zane.androidupnpdemo.util.ListUtils;
 import com.zane.androidupnpdemo.util.Utils;
 
 import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.LocalDevice;
 import org.fourthline.cling.model.types.DeviceType;
 import org.fourthline.cling.model.types.ServiceType;
 import org.fourthline.cling.model.types.UDADeviceType;
 import org.fourthline.cling.model.types.UDAServiceType;
 import org.fourthline.cling.registry.Registry;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -29,9 +36,11 @@ import java.util.Collection;
 
 public class ClingManager implements IClingManager {
 
-//    public static final ServiceType CONTENT_DIRECTORY_SERVICE = new UDAServiceType("ContentDirectory");
+    //    public static final ServiceType CONTENT_DIRECTORY_SERVICE = new UDAServiceType("ContentDirectory");
     public static final ServiceType AV_TRANSPORT_SERVICE = new UDAServiceType("AVTransport");
-    /** 控制服务 */
+    /**
+     * 控制服务
+     */
     public static final ServiceType RENDERING_CONTROL_SERVICE = new UDAServiceType("RenderingControl");
     public static final DeviceType DMR_DEVICE_TYPE = new UDADeviceType("MediaRenderer");
 
@@ -39,6 +48,11 @@ public class ClingManager implements IClingManager {
 
     private ClingUpnpService mUpnpService;
     private IDeviceManager mDeviceManager;
+    private ClingMediaServer mMediaServer;
+
+    private static final String TAG = "ClingManager";
+    private HttpServer mHttpServer;
+
 
 //    private SystemService mSystemService;
 
@@ -104,6 +118,7 @@ public class ClingManager implements IClingManager {
         return mDeviceManager.getSelectedDevice();
     }
 
+
     @Override
     public void cleanSelectedDevice() {
         if (Utils.isNull(mDeviceManager)) {
@@ -143,8 +158,28 @@ public class ClingManager implements IClingManager {
     }
 
     @Override
+    public void setClingMediaServer(ClingMediaServer mediaServer) {
+        mMediaServer = mediaServer;
+        getRegistry().addDevice(mediaServer.getDevice());
+
+
+    }
+
+
+    public void startMediaServer() {
+        try {
+            mHttpServer = new HttpServer(Config.PORT);
+        } catch (IOException ioe) {
+            Log.e(TAG, "Couldn't start server:\n" + ioe);
+            System.exit(-1);
+        }
+    }
+
+
+    @Override
     public void destroy() {
         mUpnpService.onDestroy();
         mDeviceManager.destroy();
+        mHttpServer.stop();
     }
 }

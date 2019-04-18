@@ -61,9 +61,9 @@ public class BrowseRegistryListener extends DefaultRegistryListener {
     }
 
     private void deviceAdded(Device device) {
-        Log.e(TAG, "deviceAdded");
+        Log.e(TAG, "deviceAdded "+device.toString());
         if (!device.getType().equals(ClingManager.DMR_DEVICE_TYPE)) {
-            Log.e(TAG, "deviceAdded called, but not match");
+            Log.e(TAG, "deviceAdded called, but not match   ");
             return;
         }
 

@@ -10,7 +10,10 @@ import com.zane.androidupnpdemo.control.SubscriptionControl;
 import com.zane.androidupnpdemo.entity.ClingDevice;
 import com.zane.androidupnpdemo.entity.ClingDeviceList;
 import com.zane.androidupnpdemo.entity.IDevice;
+import com.zane.androidupnpdemo.service.DeviceInfo;
 import com.zane.androidupnpdemo.util.Utils;
+
+import org.fourthline.cling.model.meta.Device;
 
 import java.util.Collection;
 import java.util.List;
@@ -50,8 +53,8 @@ public class DeviceManager implements IDeviceManager {
 
         // 重置选中状态
         Collection<ClingDevice> clingDeviceList = ClingDeviceList.getInstance().getClingDeviceList();
-        if (Utils.isNotNull(clingDeviceList)){
-            for (ClingDevice device : clingDeviceList){
+        if (Utils.isNotNull(clingDeviceList)) {
+            for (ClingDevice device : clingDeviceList) {
                 device.setSelected(false);
             }
         }
@@ -87,8 +90,10 @@ public class DeviceManager implements IDeviceManager {
 
     @Override
     public void destroy() {
-        if (Utils.isNotNull(mSubscriptionControl)){
+        if (Utils.isNotNull(mSubscriptionControl)) {
             mSubscriptionControl.destroy();
         }
     }
+
+
 }

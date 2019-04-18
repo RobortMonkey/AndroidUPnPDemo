@@ -6,10 +6,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.support.annotation.RequiresApi;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -33,6 +37,7 @@ import com.zane.androidupnpdemo.entity.IResponse;
 import com.zane.androidupnpdemo.listener.BrowseRegistryListener;
 import com.zane.androidupnpdemo.control.callback.ControlCallback;
 import com.zane.androidupnpdemo.listener.DeviceListChangedListener;
+import com.zane.androidupnpdemo.service.localserver.ClingMediaServer;
 import com.zane.androidupnpdemo.service.manager.ClingManager;
 import com.zane.androidupnpdemo.R;
 import com.zane.androidupnpdemo.entity.ClingDevice;
@@ -48,17 +53,29 @@ import java.util.Collection;
 public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener, SeekBar.OnSeekBarChangeListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
-    /** 连接设备状态: 播放状态 */
+    /**
+     * 连接设备状态: 播放状态
+     */
     public static final int PLAY_ACTION = 0xa1;
-    /** 连接设备状态: 暂停状态 */
+    /**
+     * 连接设备状态: 暂停状态
+     */
     public static final int PAUSE_ACTION = 0xa2;
-    /** 连接设备状态: 停止状态 */
+    /**
+     * 连接设备状态: 停止状态
+     */
     public static final int STOP_ACTION = 0xa3;
-    /** 连接设备状态: 转菊花状态 */
+    /**
+     * 连接设备状态: 转菊花状态
+     */
     public static final int TRANSITIONING_ACTION = 0xa4;
-    /** 获取进度 */
+    /**
+     * 获取进度
+     */
     public static final int GET_POSITION_INFO_ACTION = 0xa5;
-    /** 投放失败 */
+    /**
+     * 投放失败
+     */
     public static final int ERROR_ACTION = 0xa5;
 
     private Context mContext;
@@ -78,7 +95,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
      */
     private ClingPlayControl mClingPlayControl = new ClingPlayControl();
 
-    /** 用于监听发现设备 */
+    /**
+     * 用于监听发现设备
+     */
     private BrowseRegistryListener mBrowseRegistryListener = new BrowseRegistryListener();
 
     private ServiceConnection mUpnpServiceConnection = new ServiceConnection() {
@@ -89,13 +108,21 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             ClingUpnpService.LocalBinder binder = (ClingUpnpService.LocalBinder) service;
             ClingUpnpService beyondUpnpService = binder.getService();
 
+
             ClingManager clingUpnpServiceManager = ClingManager.getInstance();
+
+
             clingUpnpServiceManager.setUpnpService(beyondUpnpService);
             clingUpnpServiceManager.setDeviceManager(new DeviceManager());
-
             clingUpnpServiceManager.getRegistry().addListener(mBrowseRegistryListener);
-            //Search on service created.
             clingUpnpServiceManager.searchDevices();
+
+
+            ClingMediaServer mediaServer = new ClingMediaServer(mContext);
+            clingUpnpServiceManager.setClingMediaServer(mediaServer);
+            clingUpnpServiceManager.startMediaServer();
+
+
         }
 
         @Override
@@ -106,24 +133,24 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         }
     };
 
-    //    private ServiceConnection mSystemServiceConnection = new ServiceConnection() {
-    //        @Override
-    //        public void onServiceConnected(ComponentName className, IBinder service) {
-    //            Log.e(TAG, "mSystemServiceConnection onServiceConnected");
-    //
-    //            SystemService.LocalBinder systemServiceBinder = (SystemService.LocalBinder) service;
-    //            //Set binder to SystemManager
-    //            ClingManager clingUpnpServiceManager = ClingManager.getInstance();
-    ////            clingUpnpServiceManager.setSystemService(systemServiceBinder.getService());
-    //        }
-    //
-    //        @Override
-    //        public void onServiceDisconnected(ComponentName className) {
-    //            Log.e(TAG, "mSystemServiceConnection onServiceDisconnected");
-    //
-    //            ClingUpnpServiceManager.getInstance().setSystemService(null);
-    //        }
-    //    };
+//        private ServiceConnection mSystemServiceConnection = new ServiceConnection() {
+//            @Override
+//            public void onServiceConnected(ComponentName className, IBinder service) {
+//                Log.e(TAG, "mSystemServiceConnection onServiceConnected");
+//
+//                SystemService.LocalBinder systemServiceBinder = (SystemService.LocalBinder) service;
+//                //Set binder to SystemManager
+//                ClingManager clingUpnpServiceManager = ClingManager.getInstance();
+//                clingUpnpServiceManager.setSystemService(systemServiceBinder.getService());
+//            }
+//
+//            @Override
+//            public void onServiceDisconnected(ComponentName className) {
+//                Log.e(TAG, "mSystemServiceConnection onServiceDisconnected");
+//
+//                ClingUpnpServiceManager.getInstance().setSystemService(null);
+//            }
+//        };
 
 
     @Override
@@ -286,6 +313,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         int id = view.getId();
         switch (id) {
             case R.id.bt_play:
+
                 play();
                 break;
 
@@ -296,6 +324,28 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             case R.id.bt_stop:
                 stop();
                 break;
+            case R.id.select_file:
+                selectVideo();
+                break;
+        }
+    }
+
+    private void selectVideo() {
+        Intent i = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(i, 222);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (data != null) {
+            Uri uri = data.getData();
+            String path = Utils.getRealPathFromUriAboveApi19(mContext, uri);
+            Config.getInstance().setLocalFileAddress(path);
+            ((TextView)findViewById(R.id.file_path)).setText(path);
+            Log.e(TAG, path);
         }
     }
 

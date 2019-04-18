@@ -44,4 +44,8 @@ public interface IDeviceManager {
      * 销毁
      */
     void destroy();
+    /**
+     * 创建本地设备
+     */
+
 }
